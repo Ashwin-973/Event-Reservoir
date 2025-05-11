@@ -1,14 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import offlineService from '../services/offlineService';
 
-const QRScanner = ({ onScanSuccess, onScanError, resetSignal }) => {
+const QRScanner = ({ onScanSuccess, onScanError, resetSignal, offlineMode = false }) => {
   const qrInstanceRef = useRef(null);
   const [isScanning, setIsScanning] = useState(false);
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState(null);
   const [internalError, setInternalError] = useState(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(offlineMode);
   const processingScanRef = useRef(false);
   const readerElementId = useRef(`qr-reader-${Math.random().toString(36).substring(7)}`).current;
+
+  // Check if online
+  useEffect(() => {
+    const checkOnlineStatus = async () => {
+      if (offlineMode) {
+        setIsOfflineMode(true);
+        return;
+      }
+      
+      const isOnline = await offlineService.isOnline();
+      setIsOfflineMode(!isOnline);
+    };
+    
+    checkOnlineStatus();
+    
+    // Check online status periodically
+    const intervalId = setInterval(checkOnlineStatus, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [offlineMode]);
 
   useEffect(() => {
     const qrInstance = new Html5Qrcode(readerElementId, { verbose: false });
@@ -83,7 +105,7 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal }) => {
             }
           }
           setIsScanning(false);
-          if (onScanSuccess) onScanSuccess(decodedText);
+          if (onScanSuccess) onScanSuccess(decodedText, isOfflineMode);
         },
         (_errorMessage) => { /* This is for frame-by-frame scan errors, usually ignored */ }
       );
@@ -123,6 +145,12 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal }) => {
 
   return (
     <div className="w-full max-w-md mx-auto p-4 bg-white shadow-lg rounded-lg">
+      {isOfflineMode && (
+        <div className="mb-3 p-2 text-sm text-amber-700 bg-amber-100 rounded">
+          <span className="font-semibold">Offline Mode Active:</span> Data will be synced when online.
+        </div>
+      )}
+      
       <div id={readerElementId} style={{ width: '100%', minHeight: '200px' }} className="border rounded-md overflow-hidden bg-gray-100 mb-3"></div>
       
       {internalError && (

@@ -6,6 +6,7 @@ const { onboardRoutes } = require('./routes/onboard');
 const { checkinRoutes } = require('./routes/checkin');
 const { distributionRoutes } = require('./routes/distribution');
 const { dashboardRoutes } = require('./routes/dashboard');
+const { offlineRoutes } = require('./routes/offline');
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +27,12 @@ app.use('/api/onboard', onboardRoutes);
 app.use('/api/checkin', checkinRoutes);
 app.use('/api/distribute', distributionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/offline', offlineRoutes);
+
+// Health check route for offline detection
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'online', timestamp: new Date().toISOString() });
+});
 
 // Basic route
 app.get('/', (req, res) => {

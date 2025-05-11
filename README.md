@@ -1,110 +1,113 @@
-# Event Reservoir - Event Management Application
+# Event Reservoir
 
-Event Reservoir is a comprehensive event management solution designed to streamline event operations. It handles attendee onboarding, registration tracking, and resource distribution using unique QR codes.
+Event Reservoir is a comprehensive event management application designed for competition organizers. It provides tools for attendee management, check-in, resource distribution, and real-time dashboard analytics.
 
 ## Features
 
-- **CSV-based Attendee Onboarding**: Import attendees from CSV files and generate unique QR codes
-- **Registration Tracking**: Scan QR codes to check in attendees and prevent double registration
-- **Lunch/Kit Distribution**: Track distribution of resources and prevent multiple collections
-- **Central Dashboard**: View event statistics and search/filter attendee records
+- **CSV-based Attendee Onboarding**: Import attendee lists from CSV files
+- **QR Code Generation**: Generate unique QR codes for each attendee
+- **Check-in System**: Streamline the check-in process using QR codes
+- **Resource Distribution**: Track lunch and kit distribution
+- **Offline Mode**: Continue operations without internet connectivity
+- **Dashboard Analytics**: Real-time statistics and attendee search
 
 ## Tech Stack
 
-- **Frontend**: React with Vite, Tailwind CSS
-- **Backend**: Express.js
-- **Database**: Neon PostgreSQL (Serverless)
-- **QR Code**: Generated with the `qrcode` package and stored in the filesystem
+### Backend
+- Node.js with Express
+- PostgreSQL (Neon) for cloud database
+- SQLite for offline storage
+- QR code generation and validation
 
-## Prerequisites
+### Frontend
+- React with Vite
+- Tailwind CSS for styling
+- HTML5 QR Scanner for QR code scanning
+- Offline-first design with SQLite synchronization
 
-- Node.js v14 or later
-- Neon PostgreSQL account (or another PostgreSQL database)
+## Getting Started
 
-## Setup Instructions
+### Prerequisites
 
-### 1. Clone the repository
+- Node.js v14 or higher
+- npm or yarn
+- PostgreSQL database (or Neon PostgreSQL)
 
+### Installation
+
+1. Clone the repository:
 ```bash
 git clone https://github.com/yourusername/event-reservoir.git
 cd event-reservoir
 ```
 
-### 2. Backend Setup
-
+2. Install backend dependencies:
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Create .env file
-touch .env
 ```
 
-Edit the `.env` file to include:
-
-```env
-PORT=5000
-DATABASE_URL=your_neon_postgres_connection_string
-JWT_SECRET=your_jwt_secret_key
-```
-
-Start the backend:
-
+3. Set up environment variables:
 ```bash
-npm run dev
+cp .env.example .env
+# Update .env with your database credentials
 ```
 
-### 3. Frontend Setup
-
+4. Install frontend dependencies:
 ```bash
 cd ../frontend
-
-# Install dependencies
 npm install
-
-# Create .env file
-touch .env
 ```
 
-Edit the `.env` file to include:
+### Running the Application
 
-```env
-VITE_API_URL=http://localhost:5000
-```
-
-Start the frontend:
-
+1. Start the backend server:
 ```bash
+cd backend
 npm run dev
 ```
 
-The application should now be running with:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:5000
-
-## Usage
-
-1. **Upload Attendees**: Go to the "Upload CSV" page to import attendees
-2. **Check In**: Use the "Check In" page to scan QR codes and register attendees
-3. **Distribution**: Use the "Distribution" page to track lunch and kit distribution
-4. **Dashboard**: View event statistics and search for attendees
-
-## CSV Format
-
-The application expects CSV files with the following columns:
-- `name`: Full name of the attendee (required)
-- `email`: Email address (required)
-- `phone`: Phone number (optional)
-
-Example:
-```csv
-Name,Email,Phone
-John Doe,john@example.com,1234567890
-Jane Smith,jane@example.com,0987654321
+2. Start the frontend development server:
+```bash
+cd frontend
+npm run dev
 ```
+
+3. Start the offline sync service (optional):
+```bash
+cd backend
+npm run sync
+```
+
+## Offline Functionality
+
+Event Reservoir includes robust offline capabilities:
+
+- **Preloaded Data**: Attendee data is automatically synced to a local SQLite database
+- **Offline Validation**: QR codes can be validated without an internet connection
+- **Sync Queue**: Actions performed offline are synced when internet is restored
+- **Automatic Backups**: Regular backups protect against data loss
+
+For detailed instructions on using the offline mode, see [OFFLINE_README.md](./OFFLINE_README.md).
+
+## Production Deployment
+
+1. Build the frontend:
+```bash
+cd frontend
+npm run build
+```
+
+2. Deploy the backend to your preferred hosting service
+3. Set up a production database
+4. Configure environment variables for production
 
 ## License
 
-[MIT](LICENSE) 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- HTML5-QR-Code for the QR scanning functionality
+- Tailwind CSS for the UI framework
+- Neon for PostgreSQL database hosting 
