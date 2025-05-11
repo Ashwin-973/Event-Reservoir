@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["frontend/src/*"] //alias understood only by the code-editor - //is this regex?
+      
+    }
+  }
+}
