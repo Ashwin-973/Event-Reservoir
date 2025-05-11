@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import QRScanner from '../components/QRScanner';
 import Alert from '../components/Alert';
 import AttendeeCard from '../components/AttendeeCard';
@@ -9,12 +9,27 @@ const Distribution = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [distributionType, setDistributionType] = useState('lunch'); // 'lunch' or 'kit'
+  const [scannerKey, setScannerKey] = useState(0);
+  const processingQrCode = useRef(false);
 
   const handleScanSuccess = async (qrCode) => {
+    // Prevent duplicate API calls for the same scan
+    if (processingQrCode.current) return;
+    
     try {
+      processingQrCode.current = true;
       setLoading(true);
       setError(null);
       setSuccess(null);
+      
+      // Validate QR code format - assuming it's a UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(qrCode)) {
+        setError('Invalid QR code format');
+        setLoading(false);
+        processingQrCode.current = false;
+        return;
+      }
       
       // Perform distribution
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/distribute/${distributionType}`, {
@@ -58,12 +73,16 @@ const Distribution = () => {
       setAttendee(null);
     } finally {
       setLoading(false);
+      processingQrCode.current = false;
     }
   };
   
   const handleScanError = (err) => {
-    console.error('QR scan error:', err);
-    setError('Failed to scan QR code. Please try again.');
+    // Only show real errors, not the constant parse errors
+    if (!err.message.includes('No MultiFormat Readers')) {
+      console.error('QR scan error:', err);
+      setError('Failed to scan QR code. Please try again.');
+    }
     setLoading(false);
   };
   
@@ -71,6 +90,9 @@ const Distribution = () => {
     setAttendee(null);
     setError(null);
     setSuccess(null);
+    processingQrCode.current = false;
+    // Force scanner re-initialization
+    setScannerKey(prevKey => prevKey + 1);
   };
 
   const handleTypeChange = (type) => {
@@ -151,6 +173,7 @@ const Distribution = () => {
         </div>
       ) : (
         <QRScanner
+          key={scannerKey}
           onScanSuccess={handleScanSuccess}
           onScanError={handleScanError}
         />
