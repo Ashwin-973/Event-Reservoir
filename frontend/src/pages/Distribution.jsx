@@ -184,7 +184,7 @@ const Distribution = () => {
         return;
       }
       
-      setSyncStatus({ success: true, message: `Backup created: ${result.path}` });
+      setSyncStatus({ success: true, message: 'Backup file downloaded successfully' });
       
       // Auto-clear message after 3 seconds
       setTimeout(() => {

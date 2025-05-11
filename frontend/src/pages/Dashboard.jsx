@@ -39,12 +39,10 @@ const Dashboard = () => {
           await fetchOnlineData();
         }
         
-        // Get offline stats if running in Electron
-        if (offlineService.isElectron()) {
-          const offlineStatsData = offlineService.getOfflineStats();
-          if (!offlineStatsData.error) {
-            setOfflineStats(offlineStatsData);
-          }
+        // Get offline stats from IndexedDB
+        const offlineStatsData = await offlineService.getOfflineStats();
+        if (!offlineStatsData.error) {
+          setOfflineStats(offlineStatsData);
         }
       } catch (err) {
         console.error('Error initializing dashboard:', err);
@@ -121,11 +119,9 @@ const Dashboard = () => {
       }
       
       // Update offline stats
-      if (offlineService.isElectron()) {
-        const offlineStatsData = offlineService.getOfflineStats();
-        if (!offlineStatsData.error) {
-          setOfflineStats(offlineStatsData);
-        }
+      const offlineStatsData = await offlineService.getOfflineStats();
+      if (!offlineStatsData.error) {
+        setOfflineStats(offlineStatsData);
       }
       
       // Also refresh online data if possible

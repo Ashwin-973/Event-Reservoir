@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState,useEffect, useRef } from 'react';
 import QRScanner from '../components/QRScanner';
 import Alert from '../components/Alert';
 import AttendeeCard from '../components/AttendeeCard';
+import toast from 'react-hot-toast';
 
 const CheckIn = () => {
   const [attendee, setAttendee] = useState(null);
@@ -11,6 +12,18 @@ const CheckIn = () => {
   const [scannerKey, setScannerKey] = useState(0);
   const processingQrCode = useRef(false);  //where does this ref come from??
 
+
+  useEffect(()=>
+  {
+    if(success)
+    {
+      toast.success(success)
+    }
+    if(error)
+    {
+      toast.error(error)
+    }
+  },[success,error])
   const handleScanSuccess = async (qrCode) => {
     // Prevent duplicate API calls for the same scan
     if (processingQrCode.current) return;
@@ -101,7 +114,7 @@ const CheckIn = () => {
         <p className="text-gray-600">Scan the QR code to check in an attendee</p>
       </div>
       
-      {error && (
+      {/*error && (
         <div className="mb-6">
           <Alert 
             message={error}
@@ -109,9 +122,9 @@ const CheckIn = () => {
             onDismiss={() => setError(null)}
           />
         </div>
-      )}
+      )*/}
       
-      {success && (
+      {/*{success && (
         <div className="mb-6">
           <Alert 
             message={success}
@@ -120,7 +133,7 @@ const CheckIn = () => {
             onDismiss={() => setSuccess(null)}
           />
         </div>
-      )}
+      )}*/}
       
       {loading ? (
         <div className="text-center py-8">

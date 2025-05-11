@@ -1,118 +1,133 @@
-import axios from 'axios';
+import { openDB } from 'idb';
+import { saveAs } from 'file-saver';
 
-// Check if we're running in Electron
-const isElectron = () => {
-  return window && window.process && window.process.type;
+// Database configuration
+const DB_NAME = 'eventreservoir';
+const DB_VERSION = 1;
+const ATTENDEES_STORE = 'attendees';
+const SYNC_QUEUE_STORE = 'sync_queue';
+
+// Initialize IndexedDB
+const initDatabase = async () => {
+  return openDB(DB_NAME, DB_VERSION, {
+    upgrade(db) {
+      // Create attendees store if it doesn't exist
+      if (!db.objectStoreNames.contains(ATTENDEES_STORE)) {
+        const attendeesStore = db.createObjectStore(ATTENDEES_STORE, { keyPath: 'qr_code' });
+        attendeesStore.createIndex('checkedIn', 'checked_in');
+        attendeesStore.createIndex('lunchDistributed', 'lunch_distributed');
+        attendeesStore.createIndex('kitDistributed', 'kit_distributed');
+      }
+
+      // Create sync queue store if it doesn't exist
+      if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) {
+        const syncQueueStore = db.createObjectStore(SYNC_QUEUE_STORE, { 
+          keyPath: 'id', 
+          autoIncrement: true 
+        });
+        syncQueueStore.createIndex('qrCode', 'qr_code');
+        syncQueueStore.createIndex('synced', 'synced');
+      }
+    }
+  });
 };
 
-// Initialize Node.js modules only if running in Electron
-let sqlite3, fs, path, betterSqlite3;
-if (isElectron()) {
-  sqlite3 = window.require('sqlite3');
-  fs = window.require('fs-extra');
-  path = window.require('path');
-  betterSqlite3 = window.require('better-sqlite3');
-}
-
-const DB_PATH = isElectron() ? path.join(process.cwd(), 'eventreservoir_offline.db') : null;
-const BACKUP_DIR = isElectron() ? path.join(process.cwd(), 'backups') : null;
-
-// Create and initialize the database (Electron only)
-const initDatabase = () => {
-  if (!isElectron()) {
-    console.warn('SQLite operations are only available in Electron environment');
-    return Promise.resolve(null);
-  }
-
-  // Ensure backup directory exists
-  if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  }
-
-  const db = betterSqlite3(DB_PATH);
-
-  // Create tables if they don't exist
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS attendees (
-      qr_code TEXT PRIMARY KEY,
-      checked_in INTEGER DEFAULT 0,
-      lunch_distributed INTEGER DEFAULT 0,
-      kit_distributed INTEGER DEFAULT 0,
-      last_updated TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS sync_queue (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      qr_code TEXT,
-      action_type TEXT,
-      timestamp TEXT,
-      synced INTEGER DEFAULT 0
-    );
-  `);
-
-  return db;
-};
-
-// Singleton database instance
-let dbInstance = null;
-
-// Get database connection
+// Get database connection (singleton pattern)
+let dbPromise = null;
 const getDb = () => {
-  if (!isElectron()) {
-    console.warn('SQLite operations are only available in Electron environment');
-    return null;
+  if (!dbPromise) {
+    dbPromise = initDatabase();
   }
-
-  if (!dbInstance) {
-    dbInstance = initDatabase();
-  }
-  return dbInstance;
+  return dbPromise;
 };
 
-// Check network connection
+// Check network connection - enhanced for better reliability
 const isOnline = async () => {
   try {
-    await axios.get('/api/health', { timeout: 2000 });
+    // First check the browser's navigator.onLine property
+    if (!navigator.onLine) {
+      console.log('Browser reports offline status');
+      return false;
+    }
+    
+    // Then try to ping our server
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/health`, { 
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' },
+      timeout: 2000 
+    });
+    
+    if (!response.ok) {
+      console.log('Server health check failed');
+      return false;
+    }
+    
     return true;
   } catch (error) {
+    console.log('Network error during online check:', error);
     return false;
   }
 };
 
 // Sync attendee data from server
 export const syncAttendeesFromServer = async () => {
-  if (!isElectron()) {
-    return { error: 'Offline mode only available in desktop app' };
-  }
-
   try {
-    // Fetch data from server
-    const response = await axios.get('/api/offline/sync');
+    // Check online status first
+    if (!await isOnline()) {
+      return { 
+        error: true, 
+        message: 'Cannot sync while offline' 
+      };
+    }
     
-    if (response.data && response.data.status === 'success') {
-      const attendeesData = response.data.data;
-      const db = getDb();
+    // Fetch data from server
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/offline/sync`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.status === 'success') {
+      const attendeesData = data.data;
       
-      // Begin transaction
-      const insertStmt = db.prepare(`
-        INSERT OR REPLACE INTO attendees (qr_code, checked_in, lunch_distributed, kit_distributed, last_updated)
-        VALUES (?, ?, ?, ?, ?)
-      `);
+      if (!Array.isArray(attendeesData)) {
+        throw new Error('Invalid data format: expected array of attendees');
+      }
       
-      const transaction = db.transaction((attendees) => {
-        for (const attendee of attendees) {
-          insertStmt.run(
-            attendee.qr_code,
-            attendee.checked_in ? 1 : 0,
-            attendee.lunch_distributed ? 1 : 0,
-            attendee.kit_distributed ? 1 : 0,
-            new Date().toISOString()
-          );
-        }
-        return attendees.length;
-      });
+      const db = await getDb();
       
-      const count = transaction(attendeesData);
+      // Use a single transaction for all attendees
+      const tx = db.transaction(ATTENDEES_STORE, 'readwrite');
+      const store = tx.objectStore(ATTENDEES_STORE);
+      
+      // Store all the promises
+      const promises = [];
+      let count = 0;
+      
+      for (const attendee of attendeesData) {
+        // Don't await here - add to promises array
+        promises.push(store.put({
+          qr_code: attendee.qr_code,
+          checked_in: Boolean(attendee.checked_in),
+          lunch_distributed: Boolean(attendee.lunch_distributed),
+          kit_distributed: Boolean(attendee.kit_distributed),
+          last_updated: new Date().toISOString()
+        }));
+        count++;
+      }
+      
+      // Wait for all puts to complete
+      await Promise.all(promises);
+      
+      // Wait for transaction to complete
+      await tx.done;
       
       return { 
         success: true, 
@@ -120,7 +135,7 @@ export const syncAttendeesFromServer = async () => {
         count 
       };
     } else {
-      throw new Error('Invalid response from server');
+      throw new Error(`Invalid response from server: ${JSON.stringify(data)}`);
     }
   } catch (error) {
     console.error('Error syncing attendees:', error);
@@ -134,40 +149,49 @@ export const syncAttendeesFromServer = async () => {
 // Get an attendee by QR code (online or offline)
 export const getAttendeeByQrCode = async (qrCode) => {
   try {
-    // Try online mode first
+    // Try online mode first if we're online
     const online = await isOnline();
 
     if (online) {
       try {
         // Use the online API
-        const response = await axios.get(`/api/attendee/${qrCode}`);
-        return response.data;
-      } catch (error) {
-        // Fall back to offline if online request fails
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/attendee/${qrCode}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data;
+        }
+        
+        // Fall back to offline if online request has error
         console.log('Online request failed, falling back to offline mode');
+      } catch (error) {
+        console.log('Error fetching attendee online:', error);
+        // Fall back to offline
       }
     }
 
-    // Offline mode (Electron only)
-    if (isElectron()) {
-      const db = getDb();
-      const attendee = db.prepare('SELECT * FROM attendees WHERE qr_code = ?').get(qrCode);
-      
-      if (!attendee) {
-        return { error: 'Attendee not found' };
-      }
-      
-      // Convert SQLite integer to boolean
-      return {
-        qr_code: attendee.qr_code,
-        checked_in: Boolean(attendee.checked_in),
-        lunch_distributed: Boolean(attendee.lunch_distributed),
-        kit_distributed: Boolean(attendee.kit_distributed),
-        offline: true
-      };
-    } else {
-      return { error: 'Offline mode only available in desktop app' };
+    // Offline mode (IndexedDB)
+    console.log('Using offline mode to get attendee data');
+    const db = await getDb();
+    const attendee = await db.get(ATTENDEES_STORE, qrCode);
+    
+    if (!attendee) {
+      console.log('Attendee not found in offline database');
+      return { error: 'Attendee not found' };
     }
+    
+    console.log('Found attendee in offline database:', attendee);
+    return {
+      qr_code: attendee.qr_code,
+      checked_in: Boolean(attendee.checked_in),
+      lunch_distributed: Boolean(attendee.lunch_distributed),
+      kit_distributed: Boolean(attendee.kit_distributed),
+      offline: true
+    };
   } catch (error) {
     console.error('Error getting attendee:', error);
     return { error: error.message };
@@ -177,63 +201,79 @@ export const getAttendeeByQrCode = async (qrCode) => {
 // Distribute lunch (online or offline)
 export const distributeLunch = async (qrCode) => {
   try {
-    // Try online mode first
+    // Check online status
     const online = await isOnline();
 
     if (online) {
       try {
         // Use the online API
-        const response = await axios.post('/api/distribute/lunch', { qrCode });
-        return response.data;
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/distribute/lunch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          body: JSON.stringify({ qrCode })
+        });
+        
+        const data = await response.json();
+        return data;
       } catch (error) {
-        // If we got a specific error from the server, return it
-        if (error.response && error.response.data) {
-          return error.response.data;
-        }
-        // Otherwise fall back to offline if online request fails
-        console.log('Online request failed, falling back to offline mode');
+        console.log('Error distributing lunch online:', error);
+        // Fall back to offline mode
       }
     }
 
-    // Offline mode (Electron only)
-    if (isElectron()) {
-      const db = getDb();
-      
-      // Check if attendee exists and lunch not distributed yet
-      const attendee = db.prepare('SELECT * FROM attendees WHERE qr_code = ?').get(qrCode);
-      
-      if (!attendee) {
-        return { 
-          status: 'error',
-          error: 'Attendee not found',
-          offline: true
-        };
-      }
-      
-      if (attendee.lunch_distributed) {
-        return { 
-          status: 'already_distributed',
-          error: 'Attendee already collected lunch',
-          offline: true
-        };
-      }
-      
-      // Update lunch status
-      db.prepare('UPDATE attendees SET lunch_distributed = 1, last_updated = ? WHERE qr_code = ?')
-        .run(new Date().toISOString(), qrCode);
-      
-      // Add to sync queue
-      db.prepare('INSERT INTO sync_queue (qr_code, action_type, timestamp) VALUES (?, ?, ?)')
-        .run(qrCode, 'lunch_distributed', new Date().toISOString());
-      
-      return {
-        status: 'success',
-        message: 'Lunch distributed successfully (offline)',
+    console.log('Using offline mode for lunch distribution');
+    // Offline mode (IndexedDB)
+    const db = await getDb();
+    
+    // Check if attendee exists and lunch not distributed yet
+    const attendee = await db.get(ATTENDEES_STORE, qrCode);
+    
+    if (!attendee) {
+      return { 
+        status: 'error',
+        error: 'Attendee not found',
         offline: true
       };
-    } else {
-      return { error: 'Offline mode only available in desktop app' };
     }
+    
+    if (attendee.lunch_distributed) {
+      return { 
+        status: 'already_distributed',
+        error: 'Attendee already collected lunch',
+        offline: true
+      };
+    }
+    
+    // Update attendee (both operations in a single transaction)
+    const tx = db.transaction([ATTENDEES_STORE, SYNC_QUEUE_STORE], 'readwrite');
+    
+    // Clone the attendee to avoid modifying the original (which might be cached)
+    const updatedAttendee = { ...attendee };
+    updatedAttendee.lunch_distributed = true;
+    updatedAttendee.last_updated = new Date().toISOString();
+    
+    // Update attendee
+    await tx.objectStore(ATTENDEES_STORE).put(updatedAttendee);
+    
+    // Add to sync queue
+    await tx.objectStore(SYNC_QUEUE_STORE).add({
+      qr_code: qrCode,
+      action_type: 'lunch_distributed',
+      timestamp: new Date().toISOString(),
+      synced: 0
+    });
+    
+    // Complete the transaction
+    await tx.done;
+    
+    return {
+      status: 'success',
+      message: 'Lunch distributed successfully (offline)',
+      offline: true
+    };
   } catch (error) {
     console.error('Error distributing lunch:', error);
     return { 
@@ -247,63 +287,79 @@ export const distributeLunch = async (qrCode) => {
 // Distribute kit (online or offline)
 export const distributeKit = async (qrCode) => {
   try {
-    // Try online mode first
+    // Check online status
     const online = await isOnline();
 
     if (online) {
       try {
         // Use the online API
-        const response = await axios.post('/api/distribute/kit', { qrCode });
-        return response.data;
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/distribute/kit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          body: JSON.stringify({ qrCode })
+        });
+        
+        const data = await response.json();
+        return data;
       } catch (error) {
-        // If we got a specific error from the server, return it
-        if (error.response && error.response.data) {
-          return error.response.data;
-        }
-        // Otherwise fall back to offline if online request fails
-        console.log('Online request failed, falling back to offline mode');
+        console.log('Error distributing kit online:', error);
+        // Fall back to offline mode
       }
     }
 
-    // Offline mode (Electron only)
-    if (isElectron()) {
-      const db = getDb();
-      
-      // Check if attendee exists and kit not distributed yet
-      const attendee = db.prepare('SELECT * FROM attendees WHERE qr_code = ?').get(qrCode);
-      
-      if (!attendee) {
-        return { 
-          status: 'error',
-          error: 'Attendee not found',
-          offline: true
-        };
-      }
-      
-      if (attendee.kit_distributed) {
-        return { 
-          status: 'already_distributed',
-          error: 'Attendee already collected kit',
-          offline: true
-        };
-      }
-      
-      // Update kit status
-      db.prepare('UPDATE attendees SET kit_distributed = 1, last_updated = ? WHERE qr_code = ?')
-        .run(new Date().toISOString(), qrCode);
-      
-      // Add to sync queue
-      db.prepare('INSERT INTO sync_queue (qr_code, action_type, timestamp) VALUES (?, ?, ?)')
-        .run(qrCode, 'kit_distributed', new Date().toISOString());
-      
-      return {
-        status: 'success',
-        message: 'Kit distributed successfully (offline)',
+    console.log('Using offline mode for kit distribution');
+    // Offline mode (IndexedDB)
+    const db = await getDb();
+    
+    // Check if attendee exists and kit not distributed yet
+    const attendee = await db.get(ATTENDEES_STORE, qrCode);
+    
+    if (!attendee) {
+      return { 
+        status: 'error',
+        error: 'Attendee not found',
         offline: true
       };
-    } else {
-      return { error: 'Offline mode only available in desktop app' };
     }
+    
+    if (attendee.kit_distributed) {
+      return { 
+        status: 'already_distributed',
+        error: 'Attendee already collected kit',
+        offline: true
+      };
+    }
+    
+    // Update attendee (both operations in a single transaction)
+    const tx = db.transaction([ATTENDEES_STORE, SYNC_QUEUE_STORE], 'readwrite');
+    
+    // Clone the attendee to avoid modifying the original (which might be cached)
+    const updatedAttendee = { ...attendee };
+    updatedAttendee.kit_distributed = true;
+    updatedAttendee.last_updated = new Date().toISOString();
+    
+    // Update attendee
+    await tx.objectStore(ATTENDEES_STORE).put(updatedAttendee);
+    
+    // Add to sync queue
+    await tx.objectStore(SYNC_QUEUE_STORE).add({
+      qr_code: qrCode,
+      action_type: 'kit_distributed',
+      timestamp: new Date().toISOString(),
+      synced: 0
+    });
+    
+    // Complete the transaction
+    await tx.done;
+    
+    return {
+      status: 'success',
+      message: 'Kit distributed successfully (offline)',
+      offline: true
+    };
   } catch (error) {
     console.error('Error distributing kit:', error);
     return { 
@@ -316,10 +372,6 @@ export const distributeKit = async (qrCode) => {
 
 // Sync offline actions with server
 export const syncOfflineActions = async () => {
-  if (!isElectron()) {
-    return { error: 'Offline mode only available in desktop app' };
-  }
-
   try {
     // Check if online
     const online = await isOnline();
@@ -330,10 +382,15 @@ export const syncOfflineActions = async () => {
       };
     }
 
-    const db = getDb();
+    const db = await getDb();
     
     // Get pending actions
-    const pendingActions = db.prepare('SELECT * FROM sync_queue WHERE synced = 0').all();
+    const tx = db.transaction(SYNC_QUEUE_STORE, 'readonly');
+    const pendingActions = await tx.objectStore(SYNC_QUEUE_STORE)
+      .index('synced')
+      .getAll(0);
+    
+    await tx.done;
     
     if (pendingActions.length === 0) {
       return { 
@@ -351,33 +408,60 @@ export const syncOfflineActions = async () => {
     }));
     
     // Send to server
-    const response = await axios.post('/api/offline/process-queue', { actions });
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/offline/process-queue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify({ actions })
+    });
     
-    if (response.data && response.data.status === 'completed') {
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && data.status === 'completed') {
       // Mark successfully synced items
-      const syncedIds = response.data.results
+      const syncedIds = data.results
         .filter(result => result.synced)
         .map(result => {
           // Find the corresponding id from our pending actions
-          const action = pendingActions.find(item => item.qr_code === result.qr_code);
+          const action = pendingActions.find(item => item.qr_code === result.qr_code && 
+                                               item.action_type === result.action_type);
           return action ? action.id : null;
         })
         .filter(id => id !== null);
       
       if (syncedIds.length > 0) {
-        const placeholders = syncedIds.map(() => '?').join(',');
-        db.prepare(`UPDATE sync_queue SET synced = 1 WHERE id IN (${placeholders})`)
-          .run(...syncedIds);
+        // Process in batches to avoid transaction timeout
+        const batchSize = 10;
+        for (let i = 0; i < syncedIds.length; i += batchSize) {
+          const batch = syncedIds.slice(i, i + batchSize);
+          const syncTx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
+          
+          await Promise.all(batch.map(async (id) => {
+            const item = await syncTx.objectStore(SYNC_QUEUE_STORE).get(id);
+            if (item) {
+              item.synced = 1;
+              return syncTx.objectStore(SYNC_QUEUE_STORE).put(item);
+            }
+          }));
+          
+          await syncTx.done;
+        }
       }
       
       return { 
         success: true, 
         message: `Synced ${syncedIds.length} actions to server`,
         count: syncedIds.length,
-        details: response.data.results
+        details: data.results
       };
     } else {
-      throw new Error('Invalid response from server');
+      throw new Error(`Invalid response from server: ${JSON.stringify(data)}`);
     }
   } catch (error) {
     console.error('Error syncing offline actions:', error);
@@ -388,21 +472,17 @@ export const syncOfflineActions = async () => {
   }
 };
 
-// Create a backup of the SQLite database
+// Create a backup of the IndexedDB database
 export const createBackup = async () => {
-  if (!isElectron()) {
-    return { error: 'Offline mode only available in desktop app' };
-  }
-
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(BACKUP_DIR, `backup_${timestamp}.json`);
+    const db = await getDb();
     
-    const db = getDb();
-    
-    // Get attendees and sync queue data
-    const attendees = db.prepare('SELECT * FROM attendees').all();
-    const syncQueue = db.prepare('SELECT * FROM sync_queue').all();
+    // Use Promise.all for parallel execution
+    const [attendees, syncQueue] = await Promise.all([
+      db.getAll(ATTENDEES_STORE),
+      db.getAll(SYNC_QUEUE_STORE)
+    ]);
     
     // Create backup file
     const backupData = {
@@ -411,24 +491,17 @@ export const createBackup = async () => {
       syncQueue
     };
     
-    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+    // Download backup file using FileSaver.js
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+      type: 'application/json;charset=utf-8'
+    });
     
-    // Clean up old backups (keep at most 10)
-    const backupFiles = fs.readdirSync(BACKUP_DIR)
-      .filter(file => file.startsWith('backup_'))
-      .sort()
-      .reverse();
-    
-    if (backupFiles.length > 10) {
-      for (let i = 10; i < backupFiles.length; i++) {
-        fs.unlinkSync(path.join(BACKUP_DIR, backupFiles[i]));
-      }
-    }
+    saveAs(blob, `backup_${timestamp}.json`);
     
     return { 
       success: true, 
-      message: 'Backup created successfully',
-      path: backupPath
+      message: 'Backup created and downloaded successfully',
+      timestamp
     };
   } catch (error) {
     console.error('Error creating backup:', error);
@@ -440,26 +513,27 @@ export const createBackup = async () => {
 };
 
 // Get offline stats
-export const getOfflineStats = () => {
-  if (!isElectron()) {
-    return { error: 'Offline mode only available in desktop app' };
-  }
-
+export const getOfflineStats = async () => {
   try {
-    const db = getDb();
+    const db = await getDb();
     
-    const totalCount = db.prepare('SELECT COUNT(*) as count FROM attendees').get().count;
-    const checkedInCount = db.prepare('SELECT COUNT(*) as count FROM attendees WHERE checked_in = 1').get().count;
-    const lunchCount = db.prepare('SELECT COUNT(*) as count FROM attendees WHERE lunch_distributed = 1').get().count;
-    const kitCount = db.prepare('SELECT COUNT(*) as count FROM attendees WHERE kit_distributed = 1').get().count;
-    const pendingActions = db.prepare('SELECT COUNT(*) as count FROM sync_queue WHERE synced = 0').get().count;
+    // Use Promise.all for parallel execution
+    const [allAttendees, pendingActions] = await Promise.all([
+      db.getAll(ATTENDEES_STORE),
+      db.getAllFromIndex(SYNC_QUEUE_STORE, 'synced', 0)
+    ]);
+    
+    const totalCount = allAttendees.length;
+    const checkedInCount = allAttendees.filter(a => a.checked_in).length;
+    const lunchCount = allAttendees.filter(a => a.lunch_distributed).length;
+    const kitCount = allAttendees.filter(a => a.kit_distributed).length;
     
     return {
       total: totalCount,
       checked_in: checkedInCount,
       lunch_distributed: lunchCount,
       kit_distributed: kitCount,
-      pending_sync: pendingActions,
+      pending_sync: pendingActions.length,
       last_updated: new Date().toISOString()
     };
   } catch (error) {
@@ -468,8 +542,68 @@ export const getOfflineStats = () => {
   }
 };
 
+// Listen for online/offline events
+let isListeningForNetworkEvents = false;
+const setupNetworkListeners = () => {
+  if (isListeningForNetworkEvents) return;
+  
+  isListeningForNetworkEvents = true;
+  
+  // Add event listeners for online/offline events
+  window.addEventListener('online', () => {
+    console.log('Browser reports online status');
+    // Trigger sync when coming back online
+    setTimeout(async () => {
+      // Verify we're really online with a server check
+      if (await isOnline()) {
+        console.log('Confirmed online status, syncing data...');
+        await syncOfflineActions();
+        await syncAttendeesFromServer();
+      }
+    }, 2000); // Wait 2s for connection to stabilize
+  });
+  
+  window.addEventListener('offline', () => {
+    console.log('Browser reports offline status');
+    // Could dispatch an event or update UI here
+  });
+};
+
+// Set up automatic sync and backup
+export const setupAutomaticSync = () => {
+  // Set up network event listeners
+  setupNetworkListeners();
+  
+  // Sync attendees every 5 minutes
+  setInterval(async () => {
+    const online = await isOnline();
+    if (online) {
+      console.log('Auto-syncing attendees from server...');
+      await syncAttendeesFromServer();
+    }
+  }, 5 * 60 * 1000);
+
+  // Sync offline actions every 30 seconds
+  setInterval(async () => {
+    const online = await isOnline();
+    if (online) {
+      console.log('Auto-syncing offline actions to server...');
+      await syncOfflineActions();
+    }
+  }, 30 * 1000);
+
+  // Create backup every 10 minutes
+  setInterval(async () => {
+    console.log('Creating automatic backup...');
+    try {
+      await createBackup();
+    } catch (error) {
+      console.error('Auto backup failed:', error);
+    }
+  }, 10 * 60 * 1000);
+};
+
 export default {
-  isElectron,
   isOnline,
   syncAttendeesFromServer,
   getAttendeeByQrCode,
@@ -477,5 +611,6 @@ export default {
   distributeKit,
   syncOfflineActions,
   createBackup,
-  getOfflineStats
+  getOfflineStats,
+  setupAutomaticSync
 };

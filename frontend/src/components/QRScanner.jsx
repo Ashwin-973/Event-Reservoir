@@ -22,14 +22,34 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal, offlineMode = fals
       
       const isOnline = await offlineService.isOnline();
       setIsOfflineMode(!isOnline);
+      console.log('QR Scanner offline mode:', !isOnline);
     };
     
+    // Run check immediately
     checkOnlineStatus();
     
-    // Check online status periodically
-    const intervalId = setInterval(checkOnlineStatus, 30000);
+    // Check online status more frequently
+    const intervalId = setInterval(checkOnlineStatus, 5000);
     
-    return () => clearInterval(intervalId);
+    // Also listen for online/offline events from the browser
+    const handleOnline = () => {
+      console.log('Browser reports online in QR Scanner');
+      checkOnlineStatus();
+    };
+    
+    const handleOffline = () => {
+      console.log('Browser reports offline in QR Scanner');
+      setIsOfflineMode(true);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [offlineMode]);
 
   useEffect(() => {
@@ -58,11 +78,11 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal, offlineMode = fals
         if (currentInstance.isScanning) {
           currentInstance.stop()
             .then(() => currentInstance.clear())
-            .catch(_err => console.warn('Scanner was stopped/cleared during unmount, minor error ignored.'));
+            .catch(() => console.warn('Scanner was stopped/cleared during unmount, minor error ignored.'));
         } else {
           try {
             currentInstance.clear();
-          } catch (_e) {
+          } catch {
             console.warn("Minor error clearing scanner on unmount.");
           }
         }
@@ -91,7 +111,7 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal, offlineMode = fals
       await qrInstanceRef.current.start(
         selectedCameraId,
         { fps: 10, qrbox: 250, aspectRatio: 1.0 },
-        async (decodedText, _decodedResult) => {
+        async (decodedText) => {
           if (processingScanRef.current) return;
           processingScanRef.current = true;
 
@@ -107,7 +127,7 @@ const QRScanner = ({ onScanSuccess, onScanError, resetSignal, offlineMode = fals
           setIsScanning(false);
           if (onScanSuccess) onScanSuccess(decodedText, isOfflineMode);
         },
-        (_errorMessage) => { /* This is for frame-by-frame scan errors, usually ignored */ }
+        () => { /* This is for frame-by-frame scan errors, usually ignored */ }
       );
     } catch (startErr) {
       console.error('Failed to start scanner:', startErr);
