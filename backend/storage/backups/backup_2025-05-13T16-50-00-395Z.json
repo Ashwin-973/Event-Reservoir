@@ -1,0 +1,349 @@
+{
+  "timestamp": "2025-05-13T16-50-00-395Z",
+  "attendees": [
+    {
+      "qr_code": "AE1414",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.452Z"
+    },
+    {
+      "qr_code": "42fcfaae-ea7e-4ddf-8803-1e69ae223401",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.452Z"
+    },
+    {
+      "qr_code": "b823db8f-14e8-4da7-8e13-6bc5ee1b40e8",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "BW7777",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 1,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "1600112f-5184-453b-96bc-ff463ecc7fb4",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "0d4b34c1-6666-4d93-a810-61eb3a37e7b4",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "CK9999",
+      "checked_in": 0,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "cbd0edab-36f5-4caf-b811-084209ca853c",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "DB1919",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "071e6ab7-88a8-4ee3-9ea1-dde6530d6f5b",
+      "checked_in": 1,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "ES1717",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "ER2323",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "FB1212",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "GG1515",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "HS2222",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "HP0777",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "HG0888",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "JS1616",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 1,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "259361a2-d438-4fba-a26e-7f940b5711b4",
+      "checked_in": 1,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "73ebe7f1-cac2-4ff6-93e6-7b085a85cb42",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "ab14ba32-3026-471d-b52b-960d5c3f658e",
+      "checked_in": 1,
+      "lunch_distributed": 1,
+      "kit_distributed": 1,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "b8272b9f-72de-4f9a-af43-c446e5ca23dd",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "cee378ad-e854-4880-adf5-1823ad1a5c1b",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "LO1111",
+      "checked_in": 0,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "LL0000",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "LS1000",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "004dc8fc-d148-4cbd-8f16-9a4ea19918d7",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "MM1818",
+      "checked_in": 0,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.453Z"
+    },
+    {
+      "qr_code": "8cd07941-308b-4285-87a4-0c04c555bfd6",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "14061d5a-42c8-4cd9-9d0b-38284c5d7d36",
+      "checked_in": 1,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "NR6666",
+      "checked_in": 0,
+      "lunch_distributed": 1,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "NA2020",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "16d700bd-289f-434a-97ba-4f11db327511",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "PP4444",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "7e5b0a77-bce9-44e6-a4e3-73eaf0f56d10",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "8e745c76-cd5a-416d-97a6-9c9405a19d47",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "RW0999",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "SG1313",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 1,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "875c5fae-26e5-4981-bc9e-0c9088f88df3",
+      "checked_in": 1,
+      "lunch_distributed": 1,
+      "kit_distributed": 1,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "SK8888",
+      "checked_in": 1,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "SR5555",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "3a74b558-1c03-4c03-94ac-1f85ae3ba592",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "e035bd5b-7e83-49b5-ad64-a9a68195ca85",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "TS3333",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "TR2121",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "e8a6cffa-0471-456f-86b5-0ef67f9537ec",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "182adb43-3ef2-4a11-8ad6-86a16f6295b2",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "6e159c7b-2c83-4be7-8662-8fb35fb2f4a8",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    },
+    {
+      "qr_code": "a7641bd4-1912-4a48-a8f8-d83c03edb215",
+      "checked_in": 0,
+      "lunch_distributed": 0,
+      "kit_distributed": 0,
+      "last_updated": "2025-05-13T16:45:01.454Z"
+    }
+  ],
+  "syncQueue": []
+}

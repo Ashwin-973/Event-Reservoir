@@ -6,7 +6,9 @@ const fs = require('fs');
 
 const { parseCSV } = require('../services/csvService');
 const { generateQrCode } = require('../services/qrCodeService');
+const { sendRegistrationEmail, processBulkEmails } = require('../services/emailService');
 const Attendee = require('../models/Attendee');
+const Email = require('../models/Email');
 
 const router = express.Router();
 
@@ -49,9 +51,12 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
   try {
     // Parse CSV
     const attendees = await parseCSV(req.file.path);
-    console.log("Attendees", attendees)
-    if (attendees.length === 0) {
-      return res.status(400).json({ error: 'No valid attendee records found in CSV' });
+    console.log("Attendees", attendees);
+    
+    if (!attendees || attendees.length === 0) {
+      return res.status(400).json({ 
+        error: 'No valid attendee records found in CSV. Please check the file format and ensure it has "Name", "Email", and "Phone" columns.'
+      });
     }
     
     // Process each attendee
@@ -77,11 +82,21 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
           qr_code: qrCode
         });
         
+        // Record email in database for tracking
+        await Email.createEmailRecord({
+          attendee_id: attendee.id,
+          email_type: 'registration'
+        });
+
+        // Add attendee to processed list
         processedAttendees.push({
           ...attendee,
           qrCodeUrl: filePath
         });
+
+        console.log("Attendees processed : ", processedAttendees);
       } catch (error) {
+        console.error("Error processing attendee:", error);
         errors.push(`Error processing attendee ${attendeeData.email}: ${error.message}`);
       }
     }
@@ -89,15 +104,23 @@ router.post('/upload', upload.single('file'), asyncHandler(async (req, res) => {
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
     
+    // Send registration emails in bulk
+    if (processedAttendees.length > 0) {
+      processBulkEmails(processedAttendees)
+        .then(result => console.log('Email sending started:', result))
+        .catch(err => console.error('Error sending emails:', err));
+    }
+    
     res.status(201).json({
       success: true,
       processed: processedAttendees.length,
       errors: errors.length > 0 ? errors : null,
-      attendees: processedAttendees
+      attendees: processedAttendees,
+      emailStatus: processedAttendees.length > 0 ? 'Confirmation emails are being sent' : null
     });
   } catch (error) {
     console.error('Error processing CSV:', error);
-    res.status(500).json({ error: 'Failed to process CSV file' });
+    res.status(500).json({ error: 'Failed to process CSV file: ' + error.message });
   }
 }));
 

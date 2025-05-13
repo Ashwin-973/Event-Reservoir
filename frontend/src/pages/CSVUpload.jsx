@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUpTrayIcon, DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Alert from '../components/Alert';
 import fileDownload from 'js-file-download';
+import toast from 'react-hot-toast';
 
 const CSVUpload = () => {
   const [file, setFile] = useState(null);
@@ -13,6 +14,19 @@ const CSVUpload = () => {
   const [processedAttendees, setProcessedAttendees] = useState([]);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+
+  useEffect(()=>
+    {
+      if(success)
+      {
+        toast.success(success)
+      }
+      if(error)
+      {
+        toast.error(error)
+      }
+    },[success,error])
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -58,7 +72,7 @@ const CSVUpload = () => {
         });
       }, 200);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/onboard/upload`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/onboard/upload`, {
         method: 'POST',
         body: formData
       });
@@ -98,7 +112,7 @@ const CSVUpload = () => {
     const csvContent = [
       'Name,Email,QR Code URL',
       ...processedAttendees.map(attendee => 
-        `${attendee.name},${attendee.email},${import.meta.env.VITE_API_URL || ''}${attendee.qrCodeUrl}`
+        `${attendee.name},${attendee.email},${import.meta.env.VITE_API_URL}${attendee.qrCodeUrl}`
       )
     ].join('\n');
     
@@ -144,7 +158,7 @@ const CSVUpload = () => {
         <p className="text-gray-600">Upload a CSV file with attendee details</p>
       </div>
       
-      {error && (
+      {/*error && (
         <div className="mb-6">
           <Alert 
             message={error}
@@ -162,7 +176,7 @@ const CSVUpload = () => {
             onDismiss={() => setSuccess(null)}
           />
         </div>
-      )}
+      )*/}
       
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <div 

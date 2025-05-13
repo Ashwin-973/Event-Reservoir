@@ -3,6 +3,8 @@ import QRScanner from '../components/QRScanner';
 import Alert from '../components/Alert';
 import AttendeeCard from '../components/AttendeeCard';
 import offlineService from '../services/offlineService';
+import toast from 'react-hot-toast';
+
 
 const Distribution = () => {
   const [attendee, setAttendee] = useState(null);
@@ -29,6 +31,17 @@ const Distribution = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+  useEffect(()=>
+    {
+      if(success)
+      {
+        toast.success(success)
+      }
+      if(error)
+      {
+        toast.error(error)
+      }
+    },[success,error])
 
   // Function to sync data when online
   const syncData = async () => {
@@ -285,7 +298,7 @@ const Distribution = () => {
         </div>
       </div>
       
-      {error && (
+      {/*error && (
         <div className="mb-6">
           <Alert 
             message={error}
@@ -304,7 +317,7 @@ const Distribution = () => {
             onDismiss={() => setSuccess(null)}
           />
         </div>
-      )}
+      )*/}
       
       {loading ? (
         <div className="text-center py-8">

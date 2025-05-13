@@ -1,7 +1,9 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const Attendee = require('../models/Attendee');
+const Email = require('../models/Email');
 const { verifyQrCode } = require('../services/qrCodeService');
+const { sendCheckInEmail } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -41,13 +43,28 @@ router.post('/', asyncHandler(async (req, res) => {
   // Mark as checked in
   const updatedAttendee = await Attendee.updateCheckInStatus(qrCode, true);
   
+  // Current timestamp for check-in
+  const timestamp = new Date().toISOString();
+  
+  // Record email in database for tracking
+  await Email.createEmailRecord({
+    attendee_id: attendee.id,
+    email_type: 'check_in'
+  });
+  
+  // Send check-in confirmation email
+  sendCheckInEmail(updatedAttendee, timestamp)
+    .then(result => console.log(`Check-in email ${result.success ? 'sent' : 'failed'} to ${updatedAttendee.email}`))
+    .catch(err => console.error('Error sending check-in email:', err));
+  
   res.json({
     status: 'success',
     message: 'Attendee checked in successfully',
     attendee: {
       name: updatedAttendee.name,
       email: updatedAttendee.email
-    }
+    },
+    emailStatus: 'Check-in confirmation email is being sent'
   });
 }));
 

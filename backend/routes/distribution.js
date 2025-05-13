@@ -1,6 +1,8 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const Attendee = require('../models/Attendee');
+const Email = require('../models/Email');
+const {sendDistributionEmail} = require('../services/emailService');
 const { verifyQrCode } = require('../services/qrCodeService');
 
 const router = express.Router();
@@ -40,6 +42,16 @@ router.post('/lunch', asyncHandler(async (req, res) => {
   // Mark lunch as distributed
   const updatedAttendee = await Attendee.updateLunchStatus(qrCode, true);
   
+  const timestamp = new Date().toISOString();
+
+  await Email.createEmailRecord({
+    attendee_id: attendee.id,
+    email_type: 'lunch distribution'
+  });
+  // Send check-in confirmation email
+  sendDistributionEmail(updatedAttendee,'lunch', timestamp)
+    .then(result => console.log(`Lunch Distribution email ${result.success ? 'sent' : 'failed'} to ${updatedAttendee.email}`))
+    .catch(err => console.error('Error sending Lunch Distribution email:', err));
   res.json({
     status: 'success',
     message: 'Lunch distributed successfully',
@@ -85,6 +97,16 @@ router.post('/kit', asyncHandler(async (req, res) => {
   // Mark kit as distributed
   const updatedAttendee = await Attendee.updateKitStatus(qrCode, true);
   
+  const timestamp = new Date().toISOString();
+
+  await Email.createEmailRecord({
+    attendee_id: attendee.id,
+    email_type: 'kit distribution'
+  });
+  // Send check-in confirmation email
+  sendDistributionEmail(updatedAttendee,'kit', timestamp)
+    .then(result => console.log(`Kit Distribution email ${result.success ? 'sent' : 'failed'} to ${updatedAttendee.email}`))
+    .catch(err => console.error('Error sending Kit Distribution email:', err));
   res.json({
     status: 'success',
     message: 'Kit distributed successfully',

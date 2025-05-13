@@ -15,6 +15,8 @@ import {
 import AttendeeCard from '../components/AttendeeCard';
 import Alert from '../components/Alert';
 import offlineService from '../services/offlineService';
+import toast from 'react-hot-toast';
+
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -62,6 +64,14 @@ const Dashboard = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(()=>
+    {
+      if(error)
+      {
+        toast.error(error)
+      }
+    },[error])
 
   // Fetch dashboard data from server
   const fetchOnlineData = async () => {
@@ -190,7 +200,7 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/dashboard/search?q=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/dashboard/search?q=${encodeURIComponent(searchTerm)}`);
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       setAttendees(data);
@@ -313,7 +323,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {error && (
+      {/*error && (
         <div className="mb-6">
           <Alert 
             message={`Error: ${error}`} 
@@ -321,7 +331,7 @@ const Dashboard = () => {
             onDismiss={() => setError(null)}
           />
         </div>
-      )}
+      )*/}
 
       {/* Pending Sync Notification */}
       {offlineStats && offlineStats.pending_sync > 0 && (
